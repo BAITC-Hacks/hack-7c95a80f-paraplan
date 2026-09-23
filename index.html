@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101816">
+  <title>Аким на 5 часов — симулятор города</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="shell">
+  <header class="topbar"><a class="brand" href="#"><b>P<span>+</span></b><span>ParaPlan<small>ГОРОДСКАЯ ЛАБОРАТОРИЯ</small></span></a><div class="city"><i></i> СИМУЛЯЦИЯ ГОРОДА　·　АСТАНА</div><button id="reset">Сбросить сценарий ↺</button></header>
+  <main>
+    <section class="hero"><div><label>01　 /　 УПРАВЛЕНЧЕСКИЙ СИМУЛЯТОР</label><h1>Аким на <em>5 часов</em></h1><p>Пять решений. Один бюджет. Город, в котором важно не оставить районы позади.</p><div class="tags"><span>ГОРИЗОНТ · 8 КВАРТАЛОВ</span><span>5 РАЙОНОВ</span><span>14 МЕР</span></div></div><div class="orbit"><span>ASTANA<strong>∞</strong><small>СЦЕНАРИЙ БУДУЩЕГО</small></span></div><aside>AQOL<br><b>SIM / 01</b></aside></section>
+    <div class="layout">
+      <section class="panel chooser">
+        <div class="heading"><div><label>02　 /　 ВАШ ПЛАН ДЕЙСТВИЙ</label><h2>Соберите сценарий</h2></div><div class="counter"><b id="count">0</b><span>/ 5<br>РЕШЕНИЙ</span></div></div>
+        <p class="intro">Выберите ровно пять разных инициатив. Для районных проектов укажите место реализации.</p>
+        <div id="slots"></div>
+        <div class="budget"><div><label>ОБЩИЙ БЮДЖЕТ</label><strong><span id="spent">0</span><small> / 100 ед.</small></strong></div><div class="remaining"><label>ОСТАТОК</label><strong id="left">100</strong></div></div>
+        <div class="track"><i id="fill"></i></div><div class="budget-foot"><span>Единый бюджет для каждой команды</span><span id="budget-message">В пределах нормы</span></div>
+        <div id="validation" aria-live="polite"></div>
+        <div class="actions"><button class="primary" id="example">Загрузить пример из кейса　↗</button><small>Сценарий можно изменить в любой момент</small></div>
+      </section>
+      <aside class="right">
+        <section class="panel score"><div class="heading"><label>03　 /　 ИТОГ СЦЕНАРИЯ</label><span class="live">● LIVE</span></div><label class="score-label">ASTANA QUALITY<br>OF LIFE SCORE</label><div class="big-score" id="score">—<small>/ 100</small></div><p id="change">Выберите пять допустимых решений</p><div class="baseline">Исходный балл города <b id="base">52.56</b></div><div class="mini"><span>ПОТРАЧЕНО<b id="spent-result">—</b></span><span>КРИТИЧЕСКИХ ПРОВАЛОВ<b id="crit">—</b></span></div></section>
+        <section class="panel analysis"><label>✳　 РАЗБОР СЦЕНАРИЯ</label><h3>Что изменится в городе</h3><div id="analysis"><p class="muted">Сильные стороны, риски и последствия появятся после выбора допустимого набора.</p></div><small>Выводы основаны на расчёте модели и исходных данных</small></section>
+      </aside>
+    </div>
+    <section class="districts"><div class="heading"><div><label>04　 /　 КАРТА ВОЗДЕЙСТВИЯ</label><h2>Районы в фокусе</h2></div><p>Средний результат учитывает население.<br>Формула также учитывает слабейший район.</p></div><div id="districts"></div></section>
+    <section class="method"><b>МЕТОД</b><span>70% среднего балла районов с учётом населения + 30% балла слабейшего района − 1 балл за каждый критический показатель ниже 40. Эффекты мер учитывают лаг и ограничиваются шкалой 0–100.</span></section>
+  </main>
+  <footer><span>PARAPLAN · HACKATHON SIMULATOR</span><span>СИНТЕТИЧЕСКИЕ ДАННЫЕ · НЕ ДЛЯ РЕАЛЬНЫХ БЮДЖЕТНЫХ РЕШЕНИЙ</span></footer>
+</div>
+<script type="module" src="./src/app.js"></script>
+</body>
+</html>
