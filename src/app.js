@@ -4,7 +4,9 @@ import { validateScenario } from "./model.js";
 const state = Array.from({ length: SIMULATION.decisionsRequired }, () => ({ measureId: "", districtId: "" }));
 const slots = document.querySelector("#slots");
 const API_URL = "http://127.0.0.1:8000/api/simulate";
+const AI_API_URL = "http://127.0.0.1:8000/api/analyze";
 let apiResult = null;
+let aiState = { status: "idle", text: "" };
 let requestedScenario = "";
 let requestNumber = 0;
 const esc = (value) => String(value).replace(/[&<>"']/g, (c) => ({
@@ -215,6 +217,7 @@ async function calculateOnServer(validation) {
   if (scenarioKey === requestedScenario) return;
   requestedScenario = scenarioKey;
   apiResult = null;
+  aiState = { status: "idle", text: "" };
   const currentRequest = ++requestNumber;
   try {
     const response = await fetch(API_URL, {
@@ -250,11 +253,58 @@ async function calculateOnServer(validation) {
   }
 }
 
+function renderAiPanel() {
+  const button = document.querySelector("#ai-button");
+  const output = document.querySelector("#ai-analysis");
+  button.disabled = !apiResult?.valid || aiState.status === "loading";
+  button.textContent = aiState.status === "loading" ? "Готовлю разбор…" : "Получить AI-разбор";
+  output.replaceChildren();
+  if (aiState.text) {
+    const paragraph = document.createElement("p");
+    paragraph.textContent = aiState.text;
+    output.append(paragraph);
+  }
+  if (aiState.status === "unavailable" && aiState.text) output.classList.add("ai-warning");
+  else output.classList.remove("ai-warning");
+}
+
+async function requestAiAnalysis() {
+  if (!apiResult?.valid || aiState.status === "loading") return;
+  const scenarioKey = JSON.stringify(state);
+  aiState = { status: "loading", text: "Отправляю расчёт на AI-анализ…" };
+  renderAiPanel();
+  try {
+    const response = await fetch(AI_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        decisions: state.map(({ measureId, districtId }) => {
+          const measure = MEASURES.find(({ id }) => id === measureId);
+          return {
+            id: measureId,
+            district: measure.scope === "city" ? null : DISTRICTS.find(({ id }) => id === districtId).name,
+          };
+        }),
+      }),
+    });
+    const payload = await response.json();
+    if (scenarioKey !== JSON.stringify(state)) return;
+    aiState = payload.available
+      ? { status: "ready", text: payload.text }
+      : { status: "unavailable", text: payload.message || "AI-разбор временно недоступен." };
+  } catch {
+    if (scenarioKey !== JSON.stringify(state)) return;
+    aiState = { status: "unavailable", text: "Не удалось связаться с AI API. Проверьте, что backend запущен." };
+  }
+  renderAiPanel();
+}
+
 function renderResults() {
   const result = apiResult || { valid: false };
   renderScore(result);
   renderAnalysis(result);
   renderDistricts(result.valid ? result : null);
+  renderAiPanel();
 }
 
 function render() {
@@ -269,6 +319,7 @@ function render() {
     requestedScenario = "";
     requestNumber += 1;
     apiResult = null;
+    aiState = { status: "idle", text: "" };
   }
   renderResults();
 }
@@ -288,5 +339,6 @@ document.querySelector("#reset").addEventListener("click", () => {
     ({ measureId: "", districtId: "" })));
   render();
 });
+document.querySelector("#ai-button").addEventListener("click", requestAiAnalysis);
 render();
 
