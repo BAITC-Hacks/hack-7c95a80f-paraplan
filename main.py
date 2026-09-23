@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .simulation import calculate
@@ -8,6 +9,16 @@ app = FastAPI(
     title="QalaAI API",
     description="AI-powered urban decision simulator",
     version="0.1.0",
+)
+
+# Разрешаем локальный frontend (например, VS Code Live Server)
+# обращаться к API на другом локальном порту.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

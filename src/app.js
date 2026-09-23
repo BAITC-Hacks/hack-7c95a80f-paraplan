@@ -1,8 +1,12 @@
-import { DISTRICTS, INDICATORS, MEASURES, SIMULATION } from "./data.js";
-import { calculateScenario, validateScenario } from "./model.js";
+import { DISTRICTS, INDICATORS, MEASURES, SIMULATION, SYNERGIES } from "./data.js";
+import { validateScenario } from "./model.js";
 
 const state = Array.from({ length: SIMULATION.decisionsRequired }, () => ({ measureId: "", districtId: "" }));
 const slots = document.querySelector("#slots");
+const API_URL = "http://127.0.0.1:8000/api/simulate";
+let apiResult = null;
+let requestedScenario = "";
+let requestNumber = 0;
 const esc = (value) => String(value).replace(/[&<>"']/g, (c) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 }[c]));
@@ -175,14 +179,98 @@ function renderAnalysis(result) {
     ' ед.</b> Он не даёт бонуса к баллу.</p>';
 }
 
+function adaptApiResult(payload) {
+  const districts = DISTRICTS.map((source) => {
+    const indicators = payload.districts[source.name];
+    const baseline = makeBaseline(source);
+    const changes = Object.fromEntries(INDICATORS.map(({ id }) =>
+      [id, indicators[id] - source.indicators[id]]));
+    return {
+      districtId: source.id,
+      districtName: source.name,
+      population: source.population,
+      baselineScore: baseline.baselineScore,
+      score: payload.district_scores[source.name],
+      indicators,
+      changes,
+      criticalIndicators: INDICATORS.filter(({ id }) => indicators[id] < 40).map(({ id }) => id),
+    };
+  });
+  const selectedIds = new Set(state.map(({ measureId }) => measureId));
+  return {
+    valid: payload.valid,
+    score: payload.score,
+    baselineScore: payload.baseline_score,
+    scoreChange: payload.score_delta,
+    budget: { spent: payload.spent, remaining: payload.remaining, total: payload.budget },
+    criticalCount: payload.critical_count,
+    weakestDistrictScore: payload.min_district,
+    districts,
+    synergiesApplied: SYNERGIES.filter(({ measures }) => measures.every((id) => selectedIds.has(id))),
+  };
+}
+
+async function calculateOnServer(validation) {
+  const scenarioKey = JSON.stringify(state);
+  if (scenarioKey === requestedScenario) return;
+  requestedScenario = scenarioKey;
+  apiResult = null;
+  const currentRequest = ++requestNumber;
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        decisions: validation.selected.map(({ measure, districtId }) => ({
+          id: measure.id,
+          district: measure.scope === "city"
+            ? null
+            : DISTRICTS.find((district) => district.id === districtId).name,
+        })),
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail?.[0]?.msg || payload.error || "API вернул ошибку.");
+    if (currentRequest !== requestNumber) return;
+    if (!payload.valid) throw new Error(payload.error || "Сценарий отклонён backend.");
+    apiResult = adaptApiResult(payload);
+    const box = document.querySelector("#validation");
+    box.className = "ok";
+    box.textContent = "Сценарий проверен и рассчитан backend.";
+    renderResults();
+  } catch (error) {
+    if (currentRequest !== requestNumber) return;
+    apiResult = null;
+    requestedScenario = "";
+    const box = document.querySelector("#validation");
+    box.className = "";
+    box.textContent = "Не удалось получить расчёт от API: " + error.message +
+      " Проверьте, что backend запущен.";
+    renderResults();
+  }
+}
+
+function renderResults() {
+  const result = apiResult || { valid: false };
+  renderScore(result);
+  renderAnalysis(result);
+  renderDistricts(result.valid ? result : null);
+}
+
 function render() {
   renderSlots();
   renderBudget();
   renderValidation();
-  const result = calculateScenario(state);
-  renderScore(result);
-  renderAnalysis(result);
-  renderDistricts(result.valid ? result : null);
+  const validation = validateScenario(state);
+  if (validation.valid) {
+    document.querySelector("#validation").textContent = "Правила соблюдены. Получаю расчёт от API…";
+    calculateOnServer(validation);
+  } else {
+    requestedScenario = "";
+    requestNumber += 1;
+    apiResult = null;
+  }
+  renderResults();
 }
 
 document.querySelector("#example").addEventListener("click", () => {
